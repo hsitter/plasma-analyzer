@@ -1,0 +1,19 @@
+[Desktop Entry]
+Name=Sound Analyzer
+Comment=Sound Spectrum Analyzer
+
+# FIXME: temporary icon
+Icon=filename-moodbar
+Type=Service
+X-KDE-ServiceTypes=Plasma/Applet
+
+X-Plasma-API=declarativeappletscript
+X-Plasma-MainScript=ui/main.qml
+
+X-KDE-PluginInfo-Name=org.kde.plasma.analyzer
+X-KDE-PluginInfo-Category=Multimedia
+X-KDE-PluginInfo-Author=Harald Sitter
+X-KDE-PluginInfo-Email=sitter@kde.org
+X-KDE-PluginInfo-Version=1.0.0
+X-KDE-PluginInfo-License=GPL
+X-KDE-PluginInfo-EnabledByDefault=false

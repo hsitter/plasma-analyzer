@@ -1,0 +1,8 @@
+<RCC>
+    <qresource prefix="/">
+        <file>qml/main.qml</file>
+        <file>qml/ui/ConfigGeneral.qml</file>
+        <file>qml/ui/fft.js</file>
+        <file>qml/ui/SpectrumModel.qml</file>
+    </qresource>
+</RCC>
