@@ -1,22 +1,5 @@
-/*
-    Copyright 2018 Harald Sitter <sitter@kde.org>
-
-    This program is free software; you can redistribute it and/or
-    modify it under the terms of the GNU General Public License as
-    published by the Free Software Foundation; either version 2 of
-    the License or (at your option) version 3 or any later version
-    accepted by the membership of KDE e.V. (or its successor approved
-    by the membership of KDE e.V.), which shall act as a proxy
-    defined in Section 14 of version 3 of the license.
-
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
-
-    You should have received a copy of the GNU General Public License
-    along with this program.  If not, see <http://www.gnu.org/licenses/>.
-*/
+// SPDX-License-Identifier: GPL-2.0-only OR GPL-3.0-only OR LicenseRef-KDE-Accepted-GPL
+// SPDX-FileCopyrightText: 2018-2022 Harald Sitter <sitter@kde.org>
 
 #include "StreamReader.h"
 
@@ -243,17 +226,15 @@ void StreamReader::read(pa_stream *s, size_t length)
     if (!m_samples) {
         m_samples = (qint16 *)malloc(sizeof(m_samples) * (SAMPLE_BYTES / 2));
     }
-    memcpy(m_buffer + m_bufferIndex, data, length - overflow);
+    memcpy(&m_buffer.at(m_bufferIndex), data, length - overflow);
     m_bufferIndex += (length - overflow) / 2;
     pa_stream_drop(s);
-
-//    qDebug() << "read: " << "length" << length << "m_bufferIndex" << m_bufferIndex << "overflow"  << overflow  << "copied deleta" << (length - overflow);
 
     if (!overflow) {
         return;
     }
 
-    memcpy(m_samples, m_buffer, m_bufferIndex * 2);
+    memcpy(m_samples, &m_buffer.at(0), m_bufferIndex * 2);
     m_bufferIndex = 0;
 
     // 20 updates per second should be plenty. Discard data sets arriving
@@ -261,7 +242,7 @@ void StreamReader::read(pa_stream *s, size_t length)
     // look like on drugs as well as putting severe strain on everything,
     // while still being regular enough to look fluid. Could possibly become
     // a user setting at some point?
-    if (m_readTime.elapsed() < 80) {
+    if (m_readTime.elapsed() < 40) {
         return;
     }
     m_readTime.restart();
@@ -273,7 +254,7 @@ void StreamReader::read(pa_stream *s, size_t length)
     QWriteLocker l(&m_samplesRWLock);
     m_sharedSamples = QSharedPointer<int16_t>(m_samples);
     m_samples = nullptr;
-    qDebug() << "pumpgin read";
+    qDebug() << "pumping ⛽ read";
     emit readyRead();
 }
 

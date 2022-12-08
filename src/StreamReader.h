@@ -1,25 +1,9 @@
-/*
-    Copyright 2018 Harald Sitter <sitter@kde.org>
+// SPDX-License-Identifier: GPL-2.0-only OR GPL-3.0-only OR LicenseRef-KDE-Accepted-GPL
+// SPDX-FileCopyrightText: 2018-2022 Harald Sitter <sitter@kde.org>
 
-    This program is free software; you can redistribute it and/or
-    modify it under the terms of the GNU General Public License as
-    published by the Free Software Foundation; either version 2 of
-    the License or (at your option) version 3 or any later version
-    accepted by the membership of KDE e.V. (or its successor approved
-    by the membership of KDE e.V.), which shall act as a proxy
-    defined in Section 14 of version 3 of the license.
+#pragma once
 
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
-
-    You should have received a copy of the GNU General Public License
-    along with this program.  If not, see <http://www.gnu.org/licenses/>.
-*/
-
-#ifndef STREAMREADER_H
-#define STREAMREADER_H
+#include <array>
 
 #include <pulse/pulseaudio.h>
 #include <QList>
@@ -33,17 +17,13 @@
 
 #warning FIXME sample bytes hardcoded
 
-// The amount of samples in a set depends on the bytes per sample.
-// Since we have a 16bit pcm spec 2 bytes make one sample.
-// Meaning we have 512 int16 *samples* in 1024 *bytes*
-#define SAMPLE_BYTES 2048
-
 class StreamReader : public QObject
 {
     Q_OBJECT
 public:
     static StreamReader *instance();
-    ~StreamReader();
+    ~StreamReader() override;
+    Q_DISABLE_COPY_MOVE(StreamReader);
 
     Q_INVOKABLE QList<int> samplesVector();
 
@@ -77,11 +57,18 @@ private:
     /** This is the index of the sink of which we want to reecord the source */
     qint64 m_sinkIndex = -1;
 
+
+    // The amount of samples in a set depends on the bytes per sample.
+    // Since we have a 16bit pcm spec 2 bytes make one sample.
+    // Meaning we have 512 int16 *samples* in 1024 *bytes*
+    static constexpr auto SAMPLE_BYTES = 2048;
+
+
     // This fits 512 16bit samples. i.e. 1024 bytes!
     // This is the transfer buffer. The buffer is filled with data, once
     // a full sample set has been gathered the buffer is transferred into the
     // sample array and transferred to the Analyzer.
-    int16_t m_buffer[SAMPLE_BYTES / 2];
+    std::array<int16_t, SAMPLE_BYTES / 2> m_buffer;
     // Allocated on the heap in read(). We transfer ownership of this array
     // to the Analyzer once a full snapshot was taken.
     int16_t *m_samples = nullptr;
@@ -104,5 +91,3 @@ private:
 
     StreamReader();
 };
-
-#endif // STREAMREADER_H

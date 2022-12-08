@@ -78,10 +78,8 @@ Item {
         spacing: 4
 
         delegate: Item {
-
             width: Math.max(rect.width, shadow.width)
             height: parent.height
-
 
             Rectangle {
                 id: shadow
@@ -89,15 +87,12 @@ Item {
                 y: rect.y
                 width: rect.width + 2
                 height: rect.height + 2
-                color: theme.backgroundColor
+                color: "red"
                 visible: !plasmoid.configuration.Background
             }
 
-
             Rectangle {
                 id: rect
-                //                    height: Math.max(2, Math.floor((value * 50)/10) * 10)
-//                height: Math.max(2, ((Math.floor((display * 100)/10) * 10) / 100) * parent.height)
                 height: Math.max(2, display * parent.height)
                 width: 8
                 property real normalizedIndex: index / parent.ListView.view.count
@@ -106,20 +101,6 @@ Item {
                 anchors.top: plasmoid.configuration.Anchor === 1 ? parent.top: undefined
                 anchors.bottom: plasmoid.configuration.Anchor === 0 ? parent.bottom : undefined
             }
-
-//            // FIXME: the dropshadow causes 10% *CPU* load
-//            DropShadow {
-//                id: shadow
-//                anchors.fill: rect
-//                cached: true
-//                horizontalOffset: 3
-//                verticalOffset: 3
-//                radius: 8.0
-//                samples: 16
-//                color: "#80000000"
-//                smooth: true
-//                source: rect
-//            }
 
             Component.onCompleted: console.log("new delegate")
         }
