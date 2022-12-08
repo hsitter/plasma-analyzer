@@ -1,22 +1,5 @@
-/*
-    Copyright 2018 Harald Sitter <sitter@kde.org>
-
-    This program is free software; you can redistribute it and/or
-    modify it under the terms of the GNU General Public License as
-    published by the Free Software Foundation; either version 2 of
-    the License or (at your option) version 3 or any later version
-    accepted by the membership of KDE e.V. (or its successor approved
-    by the membership of KDE e.V.), which shall act as a proxy
-    defined in Section 14 of version 3 of the license.
-
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
-
-    You should have received a copy of the GNU General Public License
-    along with this program.  If not, see <http://www.gnu.org/licenses/>.
-*/
+// SPDX-License-Identifier: GPL-2.0-only OR GPL-3.0-only OR LicenseRef-KDE-Accepted-GPL
+// SPDX-FileCopyrightText: 2018-2022 Harald Sitter <sitter@kde.org>
 
 import QtQuick 2.2
 import org.kde.plasma.private.analyzer 1.0 as Analyzer
@@ -39,26 +22,13 @@ ListModel {
     function audioAvailable(event) {
         // https://wiki.mozilla.org/Audio_Data_API
         // FIXME: hardcoded crap
-        var frameBufferLength = event.frameBuffer.length // the data we get out of reader is qlist<int> (really qlist<int16>)
-        var channels = 1
-        var rate = 44100
+        const frameBufferLength = event.frameBuffer.length // the data we get out of reader is qlist<int> (really qlist<int16>)
+        const channels = 1
+        const rate = 44100
 
         // in loadmetadata in example
-        var fft = new FFT.FFT(frameBufferLength / channels, rate);
-
-
-        var fb = event.frameBuffer
-        var t  = event.time /* unused, but it's there */
-        var signal = new Float32Array(fb.length / channels)
-        var magnitude;
-
-        for (var i = 0, fbl = frameBufferLength / 2; i < fbl; i++ ) {
-            // Assuming interlaced stereo channels,
-            // need to split and merge into a stero-mix mono signal
-            signal[i] = fb[i];
-        }
-
-        fft.forward(signal);
+        const fft = new FFT.FFT(frameBufferLength / channels, rate);
+        fft.forward(event.frameBuffer);
 
         // Quick and dirty merge logic.
         // Our bar property decides how many outputs we generate, each
@@ -66,16 +36,12 @@ ListModel {
         // the first bar is the sum of spectrum0 to spectrum.length/2 and the
         // second bar is spectrum.length/2 to spectrum.length.
         // Doesn't scale or anything so the results are fairly garbage.
-        var mergeCount = fft.spectrum.length / bars
+        const mergeCount = fft.spectrum.length / bars / 2 // drop half the bars because they'll not contain anything worthwhile (13khz to 22khz is pretty empty)
         var output = new Array(bars)
         for (var i = 0; i < output.length; ++i) {
             output[i] = 0;
             for (var j = Math.floor(mergeCount * i); j < mergeCount * (i + 1); ++j) {
                 // TODO: this way of dropping bins is super stupid, with a very high resolution spectrum we'd have bins that are always 0 becuase we drop their underlying fft spectrum data
-                var frequency = j * (rate / 2.0) / fft.spectrum.length
-                if (frequency < 100 || frequency > 20000) {
-                    continue; // skip inaudible stuff
-                }
                 output[i] += fft.spectrum[j]
             }
         }
@@ -91,7 +57,6 @@ ListModel {
         // scale by maximum peak
         for (var i = 0; i < output.length; ++i) {
             output[i] = output[i] / peak * 1
-
         }
 
         // Find new peak after scaling.
