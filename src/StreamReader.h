@@ -6,26 +6,86 @@
 #include <array>
 
 #include <pulse/pulseaudio.h>
+
+#include <QDebug>
+#include <QElapsedTimer>
 #include <QList>
-#include <QObject>
 #include <QMap>
 #include <QMutex>
+#include <QObject>
 #include <QReadWriteLock>
 #include <QSharedPointer>
-#include <QTime>
 #include <QTimer>
 
-#warning FIXME sample bytes hardcoded
+namespace std
+{
+template<>
+struct default_delete<pa_threaded_mainloop> {
+    void operator()(pa_threaded_mainloop *ptr) const
+    {
+        qDebug() << "deathing mainloop";
+        pa_threaded_mainloop_stop(ptr);
+        pa_threaded_mainloop_free(ptr);
+        qDebug() << "deathing mainloop DONE";
+    }
+};
+
+template<>
+struct default_delete<pa_context> {
+    void operator()(pa_context *ptr) const
+    {
+qDebug() << "deathing context";
+        pa_context_disconnect(ptr);
+        pa_context_unref(ptr);
+        qDebug() << "deathing context DONE";
+    }
+};
+
+template<>
+struct default_delete<pa_stream> {
+    void operator()(pa_stream *ptr) const
+    {
+        qDebug() << "deathing stream" << ptr;
+        pa_stream_disconnect(ptr);
+        pa_stream_unref(ptr);
+        qDebug() << "deathing stream DONE";
+    }
+};
+
+template<>
+struct default_delete<pa_operation> {
+    void operator()(pa_operation *ptr) const
+    {
+        if (ptr) {
+            pa_operation_unref(ptr);
+        }
+    }
+};
+} // namespace std
 
 class StreamReader : public QObject
 {
     Q_OBJECT
+    Q_PROPERTY(int samplingFrequency MEMBER s_sampleRate CONSTANT)
+    Q_PROPERTY(int samplingChannels MEMBER s_sampleChannels CONSTANT)
+    Q_PROPERTY(int sampleSize MEMBER SAMPLES CONSTANT)
 public:
     static StreamReader *instance();
-    ~StreamReader() override;
-    Q_DISABLE_COPY_MOVE(StreamReader);
 
     Q_INVOKABLE QList<int> samplesVector();
+
+    // The amount of samples in a set depends on the bytes per sample.
+    // Since we have a 16bit PCM spec 2 bytes make one sample.
+    // Meaning we have 2048 int16 *samples* in 4096 *bytes*
+    static constexpr auto SAMPLE_BYTES = sizeof(int16_t);
+    static constexpr auto SAMPLES = 2048;
+    static constexpr auto SAMPLES_BYTES = SAMPLES * SAMPLE_BYTES;
+
+    static constexpr auto s_sampleRate = 44100;
+    static constexpr auto s_sampleChannels = 1;
+    static constexpr pa_sample_spec s_sampleSpec = {.format = PA_SAMPLE_S16LE,
+                                                    .rate = s_sampleRate,
+                                                    .channels = s_sampleChannels};
 
 signals:
     void readyRead();
@@ -46,48 +106,29 @@ private:
     static void cb_get_source_info(pa_context *c, const pa_source_info *i, int eol, void *userdata);
     static void cb_sink_input_info(pa_context *c, const pa_sink_input_info *i, int eol, void *userdata);
 
-    pa_threaded_mainloop *m_mainloop = nullptr;
-    pa_mainloop_api *m_mainloopAPI = nullptr;
-    pa_context *m_context = nullptr;
-
-    pa_stream *m_stream = nullptr;
+    std::unique_ptr<pa_threaded_mainloop> m_mainloop;
+    pa_mainloop_api *m_mainloopAPI = nullptr; // not unique because we don't own this one
+    std::unique_ptr<pa_context> m_context;
+    std::unique_ptr<pa_stream> m_stream;
 
     /** The current source being recorded (-1 if none) */
-    int m_sourceIndex = -1;
-    /** This is the index of the sink of which we want to reecord the source */
+    qint64 m_sourceIndex = -1;
+    /** This is the index of the sink of which we want to record the source */
     qint64 m_sinkIndex = -1;
 
-
-    // The amount of samples in a set depends on the bytes per sample.
-    // Since we have a 16bit pcm spec 2 bytes make one sample.
-    // Meaning we have 512 int16 *samples* in 1024 *bytes*
-    static constexpr auto SAMPLE_BYTES = 2048;
-
-
-    // This fits 512 16bit samples. i.e. 1024 bytes!
-    // This is the transfer buffer. The buffer is filled with data, once
-    // a full sample set has been gathered the buffer is transferred into the
-    // sample array and transferred to the Analyzer.
-    std::array<int16_t, SAMPLE_BYTES / 2> m_buffer;
-    // Allocated on the heap in read(). We transfer ownership of this array
-    // to the Analyzer once a full snapshot was taken.
-    int16_t *m_samples = nullptr;
+private:
+    std::array<int16_t, SAMPLES> m_buffer;
     size_t m_bufferIndex = 0;
-
-    // Int bool to sync shutdown behavior into callbacks.
-    QAtomicInt m_shuttingDown = 0;
 
     QMutex m_musicsPerSinkMutex;
     QMap<uint32_t, uint> m_musicsPerSink;
 
-    QSharedPointer<qint16> m_sharedSamples;
+    QList<int> m_samples;
     QReadWriteLock m_samplesRWLock;
     // Polls sink inputs for music types.
     QTimer m_pollTimer;
     // Used to discard read requests exceeding our desired read limit per second
-    QTime m_readTime;
-
-    QThread *m_thread;
+    QElapsedTimer m_readTime;
 
     StreamReader();
 };

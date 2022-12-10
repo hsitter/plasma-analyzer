@@ -1,22 +1,5 @@
-/*
-    Copyright 2018 Harald Sitter <sitter@kde.org>
-
-    This program is free software; you can redistribute it and/or
-    modify it under the terms of the GNU General Public License as
-    published by the Free Software Foundation; either version 2 of
-    the License or (at your option) version 3 or any later version
-    accepted by the membership of KDE e.V. (or its successor approved
-    by the membership of KDE e.V.), which shall act as a proxy
-    defined in Section 14 of version 3 of the license.
-
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
-
-    You should have received a copy of the GNU General Public License
-    along with this program.  If not, see <http://www.gnu.org/licenses/>.
-*/
+// SPDX-License-Identifier: GPL-2.0-only OR GPL-3.0-only OR LicenseRef-KDE-Accepted-GPL
+// SPDX-FileCopyrightText: 2018-2022 Harald Sitter <sitter@kde.org>
 
 import QtQuick 2.0
 import QtQuick.Layouts 1.0
@@ -36,7 +19,7 @@ Item {
 
             Label {
                 Layout.alignment: Qt.AlignRight
-                text: i18n("Show Background:")
+                text: i18nc("@label Show the applet background or not", "Show Background:")
             }
             CheckBox {
                 id: showBackground
@@ -44,7 +27,7 @@ Item {
 
             Label {
                 Layout.alignment: Qt.AlignRight
-                text: i18n("Pride:")
+                text: i18nc("@label colorful pride mode", "Pride:")
             }
             CheckBox {
                 id: pride
@@ -52,11 +35,11 @@ Item {
 
             Label {
                 Layout.alignment: Qt.AlignRight
-                text: i18n("Anchor Position:")
+                text: i18n("@label where to anchor the bars (top or bottom)", "Anchor Position:")
             }
             ComboBox {
                 id: anchorCombo
-                model: ["Bottom", "Top"]
+                model: [i18nc("@option anchor position", "Bottom"), i18nc("@option anchor position", "Top")]
             }
         }
     }

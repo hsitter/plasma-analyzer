@@ -1,4 +1,6 @@
-// from dsp.js https://github.com/corbanbrook/dsp.js/
+
+// SPDX-License-Identifier: MIT
+// SPDX-FileCopyrightText: 2010 Corban Brook from dps.js https://github.com/corbanbrook/dsp.js/
 
 /**
     Copyright (c) 2010 Corban Brook

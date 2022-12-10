@@ -1,24 +1,17 @@
-set(analyzer_SRCS
-    StreamReader.cpp
-)
+# SPDX-License-Identifier: BSD-3-Clause
+# SPDX-FileCopyrightText: 2018-2022 Harald Sitter <sitter@kde.org>
 
 include_directories(${PULSEAUDIO_INCLUDE_DIR})
-
-qt5_add_resources(analyzer_SRCS resources.qrc)
-add_executable(spectrump main.cpp ${analyzer_SRCS})
-target_link_libraries(spectrump
-    Qt5::Qml
-    Qt5::Gui
-    ${PULSEAUDIO_LIBRARY})
 
 set(qml_SRCS
     libqml/qmldir
 )
 
-add_library(plasma-analyzer-private SHARED libqml/plugin.cpp ${analyzer_SRCS} ${qml_SRCS})
+add_library(plasma-analyzer-private SHARED libqml/plugin.cpp StreamReader.cpp ${qml_SRCS})
 target_link_libraries(plasma-analyzer-private
     Qt5::Qml
     ${PULSEAUDIO_LIBRARY}
+    fftw3
 )
 set(PRIVATE_QML_INSTALL_DIR ${QML_INSTALL_DIR}/org/kde/plasma/private/analyzer)
 install(TARGETS plasma-analyzer-private DESTINATION ${PRIVATE_QML_INSTALL_DIR})
