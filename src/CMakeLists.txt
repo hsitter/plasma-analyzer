@@ -11,7 +11,6 @@ add_library(plasma-analyzer-private SHARED libqml/plugin.cpp StreamReader.cpp ${
 target_link_libraries(plasma-analyzer-private
     Qt5::Qml
     ${PULSEAUDIO_LIBRARY}
-    fftw3
 )
 set(PRIVATE_QML_INSTALL_DIR ${QML_INSTALL_DIR}/org/kde/plasma/private/analyzer)
 install(TARGETS plasma-analyzer-private DESTINATION ${PRIVATE_QML_INSTALL_DIR})
