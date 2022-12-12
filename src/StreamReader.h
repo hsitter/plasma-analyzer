@@ -23,10 +23,8 @@ template<>
 struct default_delete<pa_threaded_mainloop> {
     void operator()(pa_threaded_mainloop *ptr) const
     {
-        qDebug() << "deathing mainloop";
         pa_threaded_mainloop_stop(ptr);
         pa_threaded_mainloop_free(ptr);
-        qDebug() << "deathing mainloop DONE";
     }
 };
 
@@ -34,10 +32,8 @@ template<>
 struct default_delete<pa_context> {
     void operator()(pa_context *ptr) const
     {
-qDebug() << "deathing context";
         pa_context_disconnect(ptr);
         pa_context_unref(ptr);
-        qDebug() << "deathing context DONE";
     }
 };
 
@@ -45,10 +41,8 @@ template<>
 struct default_delete<pa_stream> {
     void operator()(pa_stream *ptr) const
     {
-        qDebug() << "deathing stream" << ptr;
         pa_stream_disconnect(ptr);
         pa_stream_unref(ptr);
-        qDebug() << "deathing stream DONE";
     }
 };
 
@@ -56,7 +50,7 @@ template<>
 struct default_delete<pa_operation> {
     void operator()(pa_operation *ptr) const
     {
-        if (ptr) {
+        if (ptr) { // implicitly doesn't like to be called with nullptr for some reason
             pa_operation_unref(ptr);
         }
     }
@@ -105,6 +99,7 @@ private:
     static void cb_context_state(pa_context *c, void *userdata);
     static void cb_get_source_info(pa_context *c, const pa_source_info *i, int eol, void *userdata);
     static void cb_sink_input_info(pa_context *c, const pa_sink_input_info *i, int eol, void *userdata);
+    static void cb_subscription(pa_context *c, pa_subscription_event_type_t t, uint32_t idx, void *userdata);
 
     std::unique_ptr<pa_threaded_mainloop> m_mainloop;
     pa_mainloop_api *m_mainloopAPI = nullptr; // not unique because we don't own this one
@@ -120,13 +115,10 @@ private:
     std::array<int16_t, SAMPLES> m_buffer;
     size_t m_bufferIndex = 0;
 
-    QMutex m_musicsPerSinkMutex;
     QMap<uint32_t, uint> m_musicsPerSink;
 
     QList<int> m_samples;
     QReadWriteLock m_samplesRWLock;
-    // Polls sink inputs for music types.
-    QTimer m_pollTimer;
     // Used to discard read requests exceeding our desired read limit per second
     QElapsedTimer m_readTime;
 

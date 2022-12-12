@@ -64,10 +64,6 @@ StreamReader::StreamReader()
     pa_context_set_state_callback(m_context.get(), cb_context_state, this);
 
     pa_threaded_mainloop_start(m_mainloop.get());
-
-    // FIXME this is fairly inefficient. we should really just monitor applications through callbacks.
-    m_pollTimer.setInterval(30s);
-    connect(&m_pollTimer, &QTimer::timeout, this, &StreamReader::poll);
 }
 
 QList<int> StreamReader::samplesVector()
@@ -236,6 +232,7 @@ void StreamReader::cb_stream_state(pa_stream *s, void *userdata)
         }
         // Start a new recorder stream. Possibly on a different sink.
         that->startRecorder();
+        break;
     case PA_STREAM_UNCONNECTED:
         qDebug() << "++++ STREAM UNCONNECTED" << s << that->m_stream.get();
         break;
@@ -253,9 +250,6 @@ void StreamReader::cb_stream_state(pa_stream *s, void *userdata)
 
 void StreamReader::startRecorder()
 {
-    qDebug() << Q_FUNC_INFO;
-    // FIXME: this may need a lock as it can be called from callbacks and
-    // our qtimer.
     Q_ASSERT(!m_stream);
     m_bufferIndex = 0;
 
@@ -268,8 +262,6 @@ void StreamReader::startRecorder()
     pa_stream_set_state_callback(m_stream.get(), cb_stream_state, this);
     std::unique_ptr<pa_operation>(pa_context_get_source_info_list(m_context.get(), cb_get_source_info, this));
 
-#warning fixme this should run in context ready this also needs fallback logic though. if no useful sink input is present the auto-connect should run (-1 -1)
-    // run sink input poll on first start
     if (m_sourceIndex < 0) {
         std::unique_ptr<pa_operation>(pa_context_get_sink_input_info_list(m_context.get(), cb_sink_input_info, this));
     }
@@ -277,8 +269,8 @@ void StreamReader::startRecorder()
 
 void StreamReader::cb_context_state(pa_context *c, void *userdata)
 {
-    Q_ASSERT(c);
     auto that = THAT(userdata);
+    Q_ASSERT(c);
 
     switch (pa_context_get_state(c)) {
     case PA_CONTEXT_CONNECTING:
@@ -290,12 +282,9 @@ void StreamReader::cb_context_state(pa_context *c, void *userdata)
     case PA_CONTEXT_READY:
         qDebug() << "context ready";
         that->metaObject()->invokeMethod(that, [that]() {
-            // Instantly run a poll (in the right thread) and then start
-            // the timer. This means we get onto a good device ASAP because of
-            // the manual poll. After that we'll keep our scores up to date
-            // via the timed polling.
+            pa_context_set_subscribe_callback(that->m_context.get(), cb_subscription, that);
+            pa_context_subscribe(that->m_context.get(), PA_SUBSCRIPTION_MASK_ALL, nullptr, that);
             that->poll();
-            that->m_pollTimer.start();
         });
         break;
 
@@ -348,9 +337,8 @@ void StreamReader::moveToSink(uint32_t sinkId)
     // by initializing a new stream.
     if (m_stream) {
         m_stream = nullptr;
-    } else {
-        startRecorder();
     }
+    startRecorder();
 }
 
 void StreamReader::newMusicScores()
@@ -367,7 +355,6 @@ void StreamReader::newMusicScores()
         qDebug() << "!!!! MOVING TO SINK!";
         moveToSink(highestSink);
     }
-    m_musicsPerSinkMutex.unlock();
 }
 
 static void pa_operation_callback(pa_operation *o, void *userdata)
@@ -384,38 +371,22 @@ static void pa_operation_callback(pa_operation *o, void *userdata)
     qDebug() << o << stateString;
 }
 
-// FIXME: it'd be better if we simply got events to look at it instead of poll for no good reason
 void StreamReader::poll()
 {
-    // NB: this is run in the QThread, the actual callback will be in a PA
-    //   thread, since the two might run at the same time (depending on timing)
-    //   we need proper locking of our resource!
-    // We'll lock the mutex here, then initiate the query, its callback will
-    // then call newMusicScores where the mutex is released again.
-    // Until the mutex is free we'll skip all polls.
-    if (!m_musicsPerSinkMutex.tryLock()) {
-        qDebug() << "poll skip";
-        // Couldn't lock. Skip poll to prevent contention and raise poll
-        // interval to reduce load. On successful locks this gets reduced again.
-        m_pollTimer.setInterval(qMax(m_pollTimer.interval() * 1.25, 20 * 1000.0));
-        return;
-    }
-    // TODO: could possibly stop the timer and restart on return. that way
-    //  we'd not get overwhelmbed by calls if locking the mutex takes too long
-    qDebug () << "poll";
-    m_pollTimer.setInterval(std::round(qMax(m_pollTimer.interval() * 0.75, 5 * 1000.0)));
     m_musicsPerSink.clear();
 
     std::unique_ptr<pa_operation> operation(pa_context_get_sink_input_info_list(m_context.get(), cb_sink_input_info, this));
-    qDebug() << "starting operation" << operation.get();
     pa_operation_set_state_callback(operation.get(), pa_operation_callback, this);
+}
 
-    // FIXME: instead of locking we could just listen to the operation state changes.
-    //   we stop the timer when the poll starts and start it when the operation
-    //   goes to done or cancelled. that way we'd need no lock since the timer
-    //   prevents extra runs?
-    //   context ready also calls poll directly though which may still need
-    //   the lock. the timer adjustments we could drop though.
-    //   (as the operation is async we cannot rely on the eventloop for
-    //   syncronization of a manual poll call and a timed poll call)
+void StreamReader::cb_subscription(pa_context *c, pa_subscription_event_type_t t, uint32_t idx, void *userdata)
+{
+    auto that = THAT(userdata);
+    Q_UNUSED(idx);
+    Q_ASSERT(c == that->m_context.get());
+
+    switch (t & PA_SUBSCRIPTION_EVENT_FACILITY_MASK) {
+    case PA_SUBSCRIPTION_EVENT_SINK_INPUT:
+        QMetaObject::invokeMethod(that, &StreamReader::poll);
+    }
 }
