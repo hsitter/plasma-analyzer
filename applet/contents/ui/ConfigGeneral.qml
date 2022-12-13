@@ -35,7 +35,7 @@ Item {
 
             Label {
                 Layout.alignment: Qt.AlignRight
-                text: i18n("@label where to anchor the bars (top or bottom)", "Anchor Position:")
+                text: i18nc("@label where to anchor the bars (top or bottom)", "Anchor Position:")
             }
             ComboBox {
                 id: anchorCombo
