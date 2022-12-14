@@ -23,8 +23,8 @@ Item {
     Plasmoid.backgroundHints: Plasmoid.configuration.Background ? "StandardBackground" : "NoBackground";
     Plasmoid.preferredRepresentation: Plasmoid.fullRepresentation
 
-    property var barWidth: 18
-    property var barSpacing: 4
+    property var barWidth: plasmoid.configuration.Width
+    property var barSpacing: plasmoid.configuration.Spacing
 
     ListView {
         id: spectrum

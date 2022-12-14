@@ -9,6 +9,8 @@ Item {
     property alias cfg_Background: showBackground.checked
     property alias cfg_Pride: pride.checked
     property alias cfg_Anchor: anchorCombo.currentIndex
+    property alias cfg_Width: widthSpin.value
+    property alias cfg_Spacing: spacingSpin.value
 
     ColumnLayout {
         Layout.fillWidth: true
@@ -41,7 +43,22 @@ Item {
                 id: anchorCombo
                 model: [i18nc("@option anchor position", "Bottom"), i18nc("@option anchor position", "Top")]
             }
+
+            Label {
+                Layout.alignment: Qt.AlignRight
+                text: i18nc("@label width of spectrum bars (in pixels)", "Bar Width:")
+            }
+            SpinBox {
+                id: widthSpin
+            }
+
+            Label {
+                Layout.alignment: Qt.AlignRight
+                text: i18nc("@label pixel spacing between bars", "Spacing:")
+            }
+            SpinBox {
+                id: spacingSpin
+            }
         }
     }
-
 }

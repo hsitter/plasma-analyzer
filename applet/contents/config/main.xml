@@ -21,5 +21,13 @@
       </choices>
       <default>Bottom</default>
     </entry>
+
+    <entry name="Width" type="Uint">
+      <default>18</default>
+    </entry>
+
+    <entry name="Spacing" type="Uint">
+      <default>4</default>
+    </entry>
   </group>
 </kcfg>
